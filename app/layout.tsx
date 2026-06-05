@@ -3,6 +3,7 @@ import { Inter } from "next/font/google";
 import "./globals.css";
 import { SessionProvider } from "@/providers/SessionProvider";
 import { APP_NAME } from "@/lib/constants";
+import { Toaster } from "sonner";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -22,9 +23,19 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className="light">
-      <body className={`${inter.variable} font-sans min-h-screen bg-white`}>
-        <SessionProvider>{children}</SessionProvider>
+      <body
+        className={`${inter.variable} font-sans min-h-screen bg-white`}
+      >
+        <SessionProvider>
+          {children}
+        </SessionProvider>
+
+        <Toaster
+          position="top-right"
+          richColors
+          closeButton
+        />
       </body>
     </html>
   );
-}
+};

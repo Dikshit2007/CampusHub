@@ -72,3 +72,17 @@ export interface Admin {
   admin_id: string;
   name: string;
 }
+export interface StoreProduct {
+  id: number;
+  name: string;
+  description: string | null;
+  category: string;
+  price: number;
+  image_url: string | null;
+  stock: number;
+  created_at: string;
+}
+export interface CartItem {
+  product: StoreProduct;
+  quantity: number;
+}

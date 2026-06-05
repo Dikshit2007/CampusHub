@@ -7,6 +7,7 @@ import {
   MessageSquareWarning,
   Search,
   ShoppingBag,
+  ShoppingCart,
 } from "lucide-react";
 
 const modules = [
@@ -31,6 +32,13 @@ const modules = [
     href: ROUTES.marketplace,
     icon: ShoppingBag,
   },
+  {
+  title: "QuickMart",
+  description:
+    "Order snacks, stationery, beverages and hostel essentials from campus stores.",
+  href: "/store",
+  icon: ShoppingCart,
+},
 ];
 
 export default function DashboardPage() {

@@ -8,6 +8,7 @@ import {
   MessageSquareWarning,
   Search,
   ShoppingBag,
+  ShoppingCart,
   X,
 } from "lucide-react";
 import Link from "next/link";
@@ -18,6 +19,11 @@ const navItems = [
   { href: ROUTES.complaints, label: "Complaint Portal", icon: MessageSquareWarning },
   { href: ROUTES.lostFound, label: "Lost & Found", icon: Search },
   { href: ROUTES.marketplace, label: "Marketplace", icon: ShoppingBag },
+  {
+    href: "/store",
+    label: "QuickMart",
+    icon: ShoppingCart,
+  },
 ];
 
 export function StudentSidebar({
