@@ -149,7 +149,7 @@ export const SEED_LOST_FOUND: LostFoundPost[] = [
 
 export const SEED_MARKETPLACE: MarketplaceListing[] = [
   {
-    id: "MK-001",
+    id: 1,
     product_name: "Engineering Mathematics Vol. 2",
     description: "Good condition, minimal highlighting, 2023 edition.",
     category: "Books",
@@ -162,7 +162,7 @@ export const SEED_MARKETPLACE: MarketplaceListing[] = [
     created_at: "2025-05-15T08:00:00Z",
   },
   {
-    id: "MK-002",
+    id: 2,
     product_name: "HP Laptop Stand",
     description: "Aluminium adjustable stand, used for 6 months.",
     category: "Electronics",
@@ -175,7 +175,7 @@ export const SEED_MARKETPLACE: MarketplaceListing[] = [
     created_at: "2025-05-12T14:00:00Z",
   },
   {
-    id: "MK-003",
+    id: 3,
     product_name: "Mountain Bike",
     description: "Hero Sprint, 21-speed, minor scratches, fully functional.",
     category: "Cycles",
@@ -188,7 +188,7 @@ export const SEED_MARKETPLACE: MarketplaceListing[] = [
     created_at: "2025-05-22T11:00:00Z",
   },
   {
-    id: "MK-004",
+    id: 4,
     product_name: "Hostel Study Lamp",
     description: "LED desk lamp with USB port, hostel moving sale.",
     category: "Hostel Items",

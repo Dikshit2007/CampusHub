@@ -20,7 +20,7 @@ export function ComplaintForm({
 }) {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
-  const [category, setCategory] = useState(COMPLAINT_CATEGORIES[0]);
+  const [category, setCategory] = useState<string>(COMPLAINT_CATEGORIES[0]);
   const [location, setLocation] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [success, setSuccess] = useState(false);

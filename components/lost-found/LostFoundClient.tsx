@@ -41,7 +41,6 @@ export function LostFoundClient() {
     file,
     handleFileChange,
     resetPreview,
-    PLACEHOLDER,
   } = useImagePreview();
 
   const [name, setName] = useState("");

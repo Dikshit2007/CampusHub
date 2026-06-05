@@ -32,7 +32,7 @@ export function MarketplaceClient() {
   const [search, setSearch] = useState("");
   const [categoryFilter, setCategoryFilter] = useState<string>("all");
   const [modalOpen, setModalOpen] = useState(false);
-  const { previewUrl,file, handleFileChange, resetPreview, PLACEHOLDER } =
+  const { previewUrl,file, handleFileChange, resetPreview } =
     useImagePreview();
 
   const [name, setName] = useState("");
