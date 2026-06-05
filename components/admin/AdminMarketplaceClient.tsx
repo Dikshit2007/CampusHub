@@ -11,14 +11,21 @@ import {
 } from "@/lib/data/marketplace";
 import type { MarketplaceListing } from "@/types/database";
 import { formatDate, formatPrice } from "@/lib/utils";
-import { useCallback, useState } from "react";
+import { useCallback, useEffect , useState } from "react";
 import Image from "next/image";
 
 export function AdminMarketplaceClient() {
-  const [listings, setListings] = useState(() => listMarketplaceListings());
+  const [listings, setListings] = useState<MarketplaceListing[]>([]);
   const [selected, setSelected] = useState<MarketplaceListing | null>(null);
 
-  const refresh = useCallback(() => setListings(listMarketplaceListings()), []);
+  const refresh = useCallback(async () => {
+  const data = await listMarketplaceListings();
+  setListings(data || []);
+}, []);
+
+  useEffect(() => {
+  refresh();
+}, [refresh]);
 
   return (
     <div>

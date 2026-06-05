@@ -1,11 +1,17 @@
 import { supabase } from "@/lib/supabase";
 
-export async function uploadImage(file: File) {
+export async function uploadImage(
+  file: File,
+  bucket: string = "lost-found-images"
+) {
   const fileExt = file.name.split(".").pop();
-  const fileName = `${Date.now()}.${fileExt}`;
+
+  const fileName = `${Date.now()}-${Math.random()
+    .toString(36)
+    .substring(2)}.${fileExt}`;
 
   const { error } = await supabase.storage
-    .from("lost-found-images")
+    .from(bucket)
     .upload(fileName, file);
 
   if (error) {
@@ -13,7 +19,7 @@ export async function uploadImage(file: File) {
   }
 
   const { data } = supabase.storage
-    .from("lost-found-images")
+    .from(bucket)
     .getPublicUrl(fileName);
 
   return data.publicUrl;

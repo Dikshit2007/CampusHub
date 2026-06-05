@@ -1,69 +1,105 @@
-"use client";
-
+import { supabase } from "@/lib/supabase";
 import type { CreateListingInput } from "@/types/auth";
 import type { MarketplaceListing } from "@/types/database";
-import { getMockStore, saveMockStore } from "@/lib/data/mock/store";
-import { generateId } from "@/lib/utils";
 
-export function listMarketplaceListings(): MarketplaceListing[] {
-  return [...getMockStore().marketplace].sort(
-    (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
-  );
+export async function listMarketplaceListings(): Promise<MarketplaceListing[]> {
+  const { data, error } = await supabase
+    .from("marketplace")
+    .select("*")
+    .order("created_at", { ascending: false });
+
+  if (error) throw error;
+
+  return data || [];
 }
 
-export function getListingById(id: string): MarketplaceListing | undefined {
-  return getMockStore().marketplace.find((l) => l.id === id);
+export async function getListingById(id: number) {
+  const { data, error } = await supabase
+    .from("marketplace")
+    .select("*")
+    .eq("id", id)
+    .single();
+
+  if (error) throw error;
+
+  return data;
 }
 
-export function createListing(input: CreateListingInput): MarketplaceListing {
-  const store = getMockStore();
-  const listing: MarketplaceListing = {
-    id: generateId("MK"),
-    product_name: input.product_name,
-    description: input.description,
-    category: input.category,
-    price: input.price,
-    contact_email: input.contact_email,
-    image_url: input.image_url,
-    posted_by_sic: input.posted_by_sic,
-    moderated: false,
-    is_spam: false,
-    created_at: new Date().toISOString(),
-  };
-  store.marketplace.unshift(listing);
-  saveMockStore(store);
-  return listing;
+export async function createListing(
+  input: CreateListingInput
+) {
+  const { data, error } = await supabase
+    .from("marketplace")
+    .insert([
+      {
+        product_name: input.product_name,
+        description: input.description,
+        category: input.category,
+        price: input.price,
+        contact_email: input.contact_email,
+        image_url: input.image_url,
+        posted_by_sic: input.posted_by_sic,
+        moderated: false,
+        is_spam: false,
+      },
+    ])
+    .select()
+    .single();
+
+  if (error) throw error;
+
+  return data;
 }
 
-export function deleteListing(id: string): boolean {
-  const store = getMockStore();
-  store.marketplace = store.marketplace.filter((l) => l.id !== id);
-  saveMockStore(store);
-  return true;
+export async function deleteListing(id: number) {
+  const { error } = await supabase
+    .from("marketplace")
+    .delete()
+    .eq("id", id);
+
+  if (error) throw error;
 }
 
-export function moderateListing(id: string): MarketplaceListing | undefined {
-  const store = getMockStore();
-  const idx = store.marketplace.findIndex((l) => l.id === id);
-  if (idx === -1) return undefined;
-  store.marketplace[idx] = { ...store.marketplace[idx], moderated: true };
-  saveMockStore(store);
-  return store.marketplace[idx];
+export async function moderateListing(id: number) {
+  const { data, error } = await supabase
+    .from("marketplace")
+    .update({
+      moderated: true,
+    })
+    .eq("id", id)
+    .select()
+    .single();
+
+  if (error) throw error;
+
+  return data;
 }
 
-export function markListingSpam(id: string): MarketplaceListing | undefined {
-  const store = getMockStore();
-  const idx = store.marketplace.findIndex((l) => l.id === id);
-  if (idx === -1) return undefined;
-  store.marketplace[idx] = {
-    ...store.marketplace[idx],
-    is_spam: true,
-    moderated: true,
-  };
-  saveMockStore(store);
-  return store.marketplace[idx];
+export async function markListingSpam(id: number) {
+  const { data, error } = await supabase
+    .from("marketplace")
+    .update({
+      is_spam: true,
+      moderated: true,
+    })
+    .eq("id", id)
+    .select()
+    .single();
+
+  if (error) throw error;
+
+  return data;
 }
 
-export function getMarketplaceCount(): number {
-  return getMockStore().marketplace.length;
+export async function getMarketplaceCount(): Promise<number> {
+  const { count, error } = await supabase
+    .from("marketplace")
+    .select("*", {
+      count: "exact",
+      head: true,
+    });
+
+  if (error) throw error;
+
+  return count || 0;
 }

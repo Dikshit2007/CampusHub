@@ -1,5 +1,5 @@
 "use client";
-
+import { uploadImage } from "@/lib/services/storage";
 import { ListingCard } from "@/components/marketplace/ListingCard";
 import { Button } from "@/components/ui/Button";
 import { EmptyState } from "@/components/ui/EmptyState";
@@ -15,16 +15,21 @@ import { createListing, listMarketplaceListings } from "@/lib/data/marketplace";
 import type { MarketplaceCategory } from "@/types/database";
 import { useSession } from "@/providers/SessionProvider";
 import { Plus, Search, ShoppingBag } from "lucide-react";
-import { useCallback, useMemo, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
 import Image from "next/image";
 
 export function MarketplaceClient() {
   const { studentSession } = useSession();
-  const [listings, setListings] = useState(() => listMarketplaceListings());
+  const [listings, setListings] = useState<any[]>([]);
   const [search, setSearch] = useState("");
   const [categoryFilter, setCategoryFilter] = useState<string>("all");
   const [modalOpen, setModalOpen] = useState(false);
-  const { previewUrl, handleFileChange, resetPreview, PLACEHOLDER } =
+  const { previewUrl,file, handleFileChange, resetPreview, PLACEHOLDER } =
     useImagePreview();
 
   const [name, setName] = useState("");
@@ -33,7 +38,13 @@ export function MarketplaceClient() {
   const [price, setPrice] = useState("");
   const [email, setEmail] = useState("");
 
-  const refresh = useCallback(() => setListings(listMarketplaceListings()), []);
+  const refresh = useCallback(async () => {
+  const data = await listMarketplaceListings();
+  setListings(data || []);
+}, []);
+  useEffect(() => {
+  refresh();
+  }, [refresh]);
 
   const filtered = useMemo(() => {
     const q = search.toLowerCase();
@@ -48,19 +59,25 @@ export function MarketplaceClient() {
       );
   }, [listings, search, categoryFilter]);
 
-  const handleCreate = (e: React.FormEvent) => {
+  const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!studentSession) return;
-    createListing({
+    let imageUrl =
+  "https://placehold.co/400x300/e2e8f0/64748b?text=Product";
+
+if (file) {
+  imageUrl = await uploadImage(
+    file,
+    "marketplace-images"
+  );
+}
+    await createListing({
       product_name: name,
       description,
       category,
       price: Number(price),
       contact_email: email,
-      image_url:
-        previewUrl === PLACEHOLDER
-          ? "https://placehold.co/400x300/e2e8f0/64748b?text=Product"
-          : previewUrl,
+      image_url: imageUrl,
       posted_by_sic: studentSession.user.sic_number,
     });
     setName("");
@@ -69,7 +86,7 @@ export function MarketplaceClient() {
     setEmail("");
     resetPreview();
     setModalOpen(false);
-    refresh();
+    await refresh();
   };
 
   return (

@@ -54,7 +54,7 @@ export interface LostFoundPost {
 }
 
 export interface MarketplaceListing {
-  id: string;
+  id: number;
   product_name: string;
   description: string;
   category: MarketplaceCategory;
