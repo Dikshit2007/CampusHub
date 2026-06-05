@@ -1,5 +1,5 @@
 "use client";
-
+import type { Complaint } from "@/types/database";
 import { ComplaintForm } from "@/components/complaints/ComplaintForm";
 import { ComplaintTable } from "@/components/complaints/ComplaintTable";
 import { UnauthorizedCRWarning } from "@/components/complaints/UnauthorizedCRWarning";
@@ -18,7 +18,7 @@ export function ComplaintsClient() {
   const { studentSession } = useSession();
 
   const [authorized, setAuthorized] = useState<boolean | null>(null);
-  const [complaints, setComplaints] = useState<any[]>([]);
+  const [complaints, setComplaints] = useState<Complaint[]>([]);
   const [loading, setLoading] = useState(true);
 
   const refresh = useCallback(async () => {

@@ -12,7 +12,10 @@ import { Textarea } from "@/components/ui/Textarea";
 import { MARKETPLACE_CATEGORIES } from "@/lib/constants";
 import { useImagePreview } from "@/hooks/useImagePreview";
 import { createListing, listMarketplaceListings } from "@/lib/data/marketplace";
-import type { MarketplaceCategory } from "@/types/database";
+import type {
+  MarketplaceCategory,
+  MarketplaceListing,
+} from "@/types/database";
 import { useSession } from "@/providers/SessionProvider";
 import { Plus, Search, ShoppingBag } from "lucide-react";
 import {
@@ -25,7 +28,7 @@ import Image from "next/image";
 
 export function MarketplaceClient() {
   const { studentSession } = useSession();
-  const [listings, setListings] = useState<any[]>([]);
+  const [listings, setListings] = useState<MarketplaceListing[]>([]);
   const [search, setSearch] = useState("");
   const [categoryFilter, setCategoryFilter] = useState<string>("all");
   const [modalOpen, setModalOpen] = useState(false);
