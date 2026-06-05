@@ -20,12 +20,20 @@ export default function AdminDashboardPage() {
   const [stats, setStats] = useState({ complaints: 0, lostFound: 0, marketplace: 0 });
 
   useEffect(() => {
+  async function loadStats() {
+    const complaints = await getComplaintCount();
+    const lostFound = await getLostFoundCount();
+    const marketplace = await getMarketplaceCount();
+
     setStats({
-      complaints: getComplaintCount(),
-      lostFound: getLostFoundCount(),
-      marketplace: getMarketplaceCount(),
+      complaints,
+      lostFound,
+      marketplace,
     });
-  }, []);
+  }
+
+  loadStats();
+}, []);
 
   const sections = [
     {
