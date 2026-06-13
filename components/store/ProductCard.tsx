@@ -60,7 +60,7 @@ export default function ProductCard({
                 description: product.name,
               });
             }}
-            className="px-3 py-1.5 rounded-lg font-medium bg-green-600 text-white hover:bg-green-700"
+            className="px-3 py-1.5 rounded-lg font-medium bg-blue-600 text-white hover:bg-green-700"
           >
             + Add
           </button>

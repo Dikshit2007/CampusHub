@@ -1,8 +1,10 @@
 "use client";
-
+import ViewCartBar from "./ViewCartBar";
 import { useMemo, useState } from "react";
 import ProductCard from "./ProductCard";
 import { StoreProduct } from "@/types/database";
+import { useCart } from "@/components/context/CartContext";
+import CartDrawer from "./CartDrawer";
 
 interface Props {
   products: StoreProduct[];
@@ -11,7 +13,8 @@ interface Props {
 export default function StoreClient({ products }: Props) {
   const [search, setSearch] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("All");
-
+  const [cartOpen, setCartOpen] = useState(false);
+  const { cartCount } = useCart();
   const categories = [
     "All",
     ...new Set(products.map((p) => p.category)),
@@ -34,6 +37,18 @@ export default function StoreClient({ products }: Props) {
 
  return (
   <div>
+    <div className="flex justify-between items-center mb-4">
+      <h1 className="text-2xl font-bold">
+        QuickMart
+      </h1>
+
+      <button
+        onClick={() => setCartOpen(true)}
+        className="bg-blue-600 text-white px-4 py-2 rounded-xl hover:bg-blue-700"
+      >
+        🛒 Cart ({cartCount})
+      </button>
+    </div>
     {/* Search */}
     <input
       type="text"
@@ -81,6 +96,15 @@ export default function StoreClient({ products }: Props) {
         No products found.
       </p>
     )}
+  <CartDrawer
+  open={cartOpen}
+  onClose={() => setCartOpen(false)}
+/>
+<ViewCartBar
+  onOpenCart={() =>
+    setCartOpen(true)
+  }
+/>
   </div>
 )
 }

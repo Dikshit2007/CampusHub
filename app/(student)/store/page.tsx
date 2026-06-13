@@ -1,6 +1,5 @@
 import { getProducts } from "@/lib/data/store";
 import StoreClient from "@/components/store/StoreClient";
-import CartButton from "./CartButton";
 
 export default async function StorePage() {
   const products = await getProducts();
@@ -11,8 +10,6 @@ export default async function StorePage() {
         <h1 className="text-4xl font-bold">
           QuickMart
         </h1>
-
-        <CartButton />
         
       </div>
 

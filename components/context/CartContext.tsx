@@ -4,7 +4,9 @@ import {
   createContext,
   useContext,
   useState,
+  useEffect,
 } from "react";
+
 import {
   CartItem,
   StoreProduct,
@@ -29,6 +31,8 @@ interface CartContextType {
   getQuantity: (
     productId: number
   ) => number;
+
+  clearCart: () => void;
 }
 
 const CartContext =
@@ -41,9 +45,31 @@ export function CartProvider({
 }: {
   children: React.ReactNode;
 }) {
-  const [items, setItems] = useState<
-    CartItem[]
-  >([]);
+  const [items, setItems] = useState<CartItem[]>(
+    () => {
+      if (
+        typeof window === "undefined"
+      ) {
+        return [];
+      }
+
+      const savedCart =
+        localStorage.getItem(
+          "quickmart-cart"
+        );
+
+      return savedCart
+        ? JSON.parse(savedCart)
+        : [];
+    }
+  );
+
+  useEffect(() => {
+    localStorage.setItem(
+      "quickmart-cart",
+      JSON.stringify(items)
+    );
+  }, [items]);
 
   const addToCart = (
     product: StoreProduct
@@ -55,6 +81,13 @@ export function CartProvider({
       );
 
       if (existing) {
+        if (
+          existing.quantity >=
+          product.stock
+        ) {
+          return prev;
+        }
+
         return prev.map((item) =>
           item.product.id === product.id
             ? {
@@ -77,31 +110,31 @@ export function CartProvider({
   };
 
   const increaseQuantity = (
-  productId: number
-) => {
-  setItems((prev) =>
-    prev.map((item) => {
-      if (
-        item.product.id === productId
-      ) {
+    productId: number
+  ) => {
+    setItems((prev) =>
+      prev.map((item) => {
         if (
-          item.quantity >=
-          item.product.stock
+          item.product.id === productId
         ) {
-          return item;
+          if (
+            item.quantity >=
+            item.product.stock
+          ) {
+            return item;
+          }
+
+          return {
+            ...item,
+            quantity:
+              item.quantity + 1,
+          };
         }
 
-        return {
-          ...item,
-          quantity:
-            item.quantity + 1,
-        };
-      }
-
-      return item;
-    })
-  );
-};
+        return item;
+      })
+    );
+  };
 
   const decreaseQuantity = (
     productId: number
@@ -134,6 +167,10 @@ export function CartProvider({
     return item?.quantity || 0;
   };
 
+  const clearCart = () => {
+    setItems([]);
+  };
+
   const cartCount = items.reduce(
     (sum, item) =>
       sum + item.quantity,
@@ -149,6 +186,7 @@ export function CartProvider({
         increaseQuantity,
         decreaseQuantity,
         getQuantity,
+        clearCart,
       }}
     >
       {children}
