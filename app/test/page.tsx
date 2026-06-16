@@ -1,66 +1,26 @@
 "use client";
 
-import { useState } from "react";
-import { signup, login } from "@/lib/auth/mock-student-auth";
-
 export default function TestPage() {
-  const [message, setMessage] = useState("");
-
-  const testSignup = async () => {
-    const result = await signup({
-      sic: "ADI001",
-      fullName: "Aditya",
-      password: "123456",
-      confirmPassword: "123456",
+  const testOrder = async () => {
+    const res = await fetch("/api/create-order", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        amount: 100,
+      }),
     });
 
-    if (result.ok) {
-      setMessage("✅ Signup Success");
-    } else {
-      setMessage("❌ Signup Error: " + result.error);
-    }
-  };
+    const data = await res.json();
 
-  const testLogin = async () => {
-    const result = await login({
-      sic: "ADI001",
-      password: "123456",
-      rememberMe: true,
-    });
-
-    if (result.ok) {
-      setMessage(
-        `✅ Login Success. Welcome ${result.session.user.full_name}`
-      );
-    } else {
-      setMessage("❌ Login Error: " + result.error);
-    }
+    console.log(data);
+    alert(JSON.stringify(data));
   };
 
   return (
-    <div style={{ padding: "40px" }}>
-      <h1>Supabase Test</h1>
-
-      <button
-        onClick={testSignup}
-        style={{
-          padding: "10px",
-          marginRight: "10px",
-        }}
-      >
-        Test Signup
-      </button>
-
-      <button
-        onClick={testLogin}
-        style={{
-          padding: "10px",
-        }}
-      >
-        Test Login
-      </button>
-
-      <p style={{ marginTop: "20px" }}>{message}</p>
-    </div>
+    <button onClick={testOrder}>
+      Create Razorpay Order
+    </button>
   );
 }

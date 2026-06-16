@@ -26,8 +26,127 @@ export default function CheckoutModal({
       item.product.price * item.quantity,
     0
   );
+  const loadRazorpay = () => {
+  return new Promise((resolve) => {
+    const script = document.createElement("script");
+
+    script.src =
+      "https://checkout.razorpay.com/v1/checkout.js";
+
+    script.onload = () => {
+      resolve(true);
+    };
+
+    document.body.appendChild(script);
+  });
+};
   const handlePlaceOrder = async () => {
   try {
+      if (paymentMethod === "online") {
+  await loadRazorpay();
+
+  const orderResponse = await fetch(
+    "/api/create-order",
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        amount: total,
+      }),
+    }
+  );
+
+  const razorpayOrder =
+    await orderResponse.json();
+
+  const options = {
+  key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID!,
+
+  amount: razorpayOrder.amount,
+
+  currency: razorpayOrder.currency,
+
+  order_id: razorpayOrder.id,
+
+  name: "CampusHub",
+
+  description: "QuickMart Order",
+
+  prefill: {
+    name:
+      studentSession?.user.full_name,
+  },
+
+  theme: {
+    color: "#2563eb",
+  },
+
+  handler: async function (
+  response: any
+) {
+  console.log("HANDLER STARTED");
+  console.log(response);
+  try {
+    const webhookResponse = await fetch(
+      "https://hazelnut-drank-powwow.ngrok-free.dev/webhook/700df436-1e46-4cf8-9427-8a205708924d",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "ngrok-skip-browser-warning": "true",
+        },
+        body: JSON.stringify({
+          studentName:
+            studentSession?.user.full_name,
+
+          studentSic:
+            studentSession?.user.sic_number,
+
+          items: items.map((item) => ({
+            name: item.product.name,
+            qty: item.quantity,
+          })),
+
+          total,
+
+          paymentMethod: "online",
+
+          paymentId:
+            response.razorpay_payment_id,
+
+          orderId:
+            response.razorpay_order_id,
+
+          notes,
+        }),
+      }
+    );
+
+    const data =
+      await webhookResponse.json();
+
+    setOrderId(data.order_id);
+  } catch (error) {
+    console.error(error);
+
+    toast.error(
+      "Order save failed"
+    );
+  }
+},
+}; // <-- ADD THIS
+
+const rzp = new (
+  window as any
+).Razorpay(options);
+
+rzp.open();
+
+return;
+
+}
     setLoading(true);
 
     const response = await fetch(
@@ -59,15 +178,8 @@ console.log(data);
 
 setOrderId(data.order_id);
 
-    setTimeout(() => {
-  onClose();
-}, 500);
-
-onClose();
-    setTimeout(() => {
-  onClose();
-}, 500);
-    onClose();
+    
+    // onClose();
   } catch (error) {
     console.error(error);
 
@@ -76,7 +188,7 @@ onClose();
     setLoading(false);
   }
 };
-  if (orderId && paymentMethod === "cash") {
+  if (orderId) {
   return (
     <>
       <div className="fixed inset-0 bg-black/40 z-50" />
