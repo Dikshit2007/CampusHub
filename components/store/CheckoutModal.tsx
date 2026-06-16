@@ -53,9 +53,11 @@ export default function CheckoutModal({
       }
     );
 
-    const data = await response.json();
+      const data = await response.json();
 
-    setOrderId(data.order_id);
+console.log(data);
+
+setOrderId(data.order_id);
 
     setTimeout(() => {
   onClose();
