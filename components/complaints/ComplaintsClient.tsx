@@ -1,18 +1,23 @@
+
 "use client";
+
 import type { Complaint } from "@/types/database";
 import { ComplaintForm } from "@/components/complaints/ComplaintForm";
 import { ComplaintTable } from "@/components/complaints/ComplaintTable";
 import { UnauthorizedCRWarning } from "@/components/complaints/UnauthorizedCRWarning";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/Card";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/Card";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { PageLoading } from "@/components/ui/LoadingSkeleton";
 import { isAuthorizedCR } from "@/lib/authorization/isAuthorizedCR";
-import {
-  listComplaintsByStudent,
-  listAllComplaints,
-} from "@/lib/data/complaints";
+import { listAllComplaints } from "@/lib/data/complaints";
 import { useSession } from "@/providers/SessionProvider";
 import { useCallback, useEffect, useState } from "react";
+import { toast } from "sonner";
 
 export function ComplaintsClient() {
   const { studentSession } = useSession();
@@ -22,51 +27,56 @@ export function ComplaintsClient() {
   const [loading, setLoading] = useState(true);
 
   const refresh = useCallback(async () => {
-    if (!studentSession) return;
-
     try {
-      if (authorized) {
-        const data = await listComplaintsByStudent(
-          studentSession.user.sic_number
-        );
-        setComplaints(data || []);
-      } else {
-        const data = await listAllComplaints();
-        setComplaints(data || []);
-      }
-    } catch (err) {
-      console.error(err);
+      const data = await listAllComplaints();
+      setComplaints(data ?? []);
+    } catch (error) {
+      console.error("Failed to load complaints:", error);
+      toast.error("Failed to load complaints.");
     }
-  }, [studentSession, authorized]);
+  }, []);
 
   useEffect(() => {
+    let cancelled = false;
+
     async function loadData() {
-      if (!studentSession) return;
+      if (!studentSession?.user?.sic_number) {
+        setAuthorized(false);
+        setLoading(false);
+        return;
+      }
+
+      setLoading(true);
 
       try {
-        const ok = await isAuthorizedCR(
-          studentSession.user.sic_number
-        );
+        const sic = studentSession.user.sic_number.trim().toUpperCase();
+        const isCR = await isAuthorizedCR(sic);
 
-        setAuthorized(ok);
+        if (cancelled) return;
+        setAuthorized(isCR);
 
-        if (ok) {
-          const data = await listComplaintsByStudent(
-            studentSession.user.sic_number
-          );
-          setComplaints(data || []);
-        } else {
-          const data = await listAllComplaints();
-          setComplaints(data || []);
+        const data = await listAllComplaints();
+
+        if (!cancelled) {
+          setComplaints(data ?? []);
         }
-      } catch (err) {
-        console.error(err);
+      } catch (error) {
+        console.error("Complaint portal loading error:", error);
+
+        if (!cancelled) {
+          setAuthorized(false);
+          toast.error("Unable to load the complaint portal.");
+        }
       } finally {
-        setLoading(false);
+        if (!cancelled) setLoading(false);
       }
     }
 
     loadData();
+
+    return () => {
+      cancelled = true;
+    };
   }, [studentSession]);
 
   if (loading || authorized === null) {
@@ -98,7 +108,7 @@ export function ComplaintsClient() {
           <CardHeader>
             <CardTitle>
               {authorized
-                ? "My Complaints"
+                ? "All Campus Complaints"
                 : "Campus Complaints (View Only)"}
             </CardTitle>
           </CardHeader>

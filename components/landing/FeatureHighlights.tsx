@@ -1,6 +1,12 @@
 import { Card, CardContent } from "@/components/ui/Card";
 import { MessageSquareWarning, Search, ShoppingBag } from "lucide-react";
 
+import { Hero } from "@/components/landing/Hero";
+
+export default function HomePage() {
+  return <Hero />;
+}
+
 const features = [
   {
     icon: MessageSquareWarning,

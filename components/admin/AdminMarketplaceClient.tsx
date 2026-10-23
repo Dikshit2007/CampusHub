@@ -11,21 +11,42 @@ import {
 } from "@/lib/data/marketplace";
 import type { MarketplaceListing } from "@/types/database";
 import { formatDate, formatPrice } from "@/lib/utils";
-import { useCallback, useEffect , useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import Image from "next/image";
+import { toast } from "sonner";
 
 export function AdminMarketplaceClient() {
   const [listings, setListings] = useState<MarketplaceListing[]>([]);
   const [selected, setSelected] = useState<MarketplaceListing | null>(null);
 
   const refresh = useCallback(async () => {
-  const data = await listMarketplaceListings();
-  setListings(data || []);
-}, []);
+    const data = await listMarketplaceListings();
+    setListings(data || []);
+  }, []);
 
   useEffect(() => {
-  refresh();
-}, [refresh]);
+    refresh();
+  }, [refresh]);
+
+  const handleModerate = async (id: number) => {
+    await moderateListing(id);
+    toast.success("Listing approved.");
+    await refresh();
+  };
+
+  const handleSpam = async (id: number) => {
+    await markListingSpam(id);
+    toast.success("Listing marked as spam.");
+    await refresh();
+  };
+
+  const handleDelete = async (id: number) => {
+    if (!confirm("Delete listing?")) return;
+    await deleteListing(id);
+    toast.success("Listing deleted.");
+    if (selected?.id === id) setSelected(null);
+    await refresh();
+  };
 
   return (
     <div>
@@ -53,7 +74,9 @@ export function AdminMarketplaceClient() {
                 <td className="px-4 py-3">{l.category}</td>
                 <td className="px-4 py-3">{formatPrice(l.price)}</td>
                 <td className="px-4 py-3">
-                  {l.moderated ? (
+                  {l.is_spam ? (
+                    <span className="text-red-600 text-xs font-medium">Spam</span>
+                  ) : l.moderated ? (
                     <span className="text-green-600 text-xs font-medium">Yes</span>
                   ) : (
                     <span className="text-amber-600 text-xs font-medium">Pending</span>
@@ -62,24 +85,17 @@ export function AdminMarketplaceClient() {
                 <td className="px-4 py-3">
                   <div className="flex justify-end gap-2 flex-wrap">
                     <Button variant="ghost" size="sm" onClick={() => setSelected(l)}>View</Button>
-                    {!l.moderated && (
-                      <Button variant="secondary" size="sm" onClick={() => { moderateListing(l.id); refresh(); }}>
-                        Moderate
+                    {!l.moderated && !l.is_spam && (
+                      <Button variant="secondary" size="sm" onClick={() => handleModerate(l.id)}>
+                        Approve
                       </Button>
                     )}
-                    <Button variant="outline" size="sm" onClick={() => { markListingSpam(l.id); refresh(); }}>
-                      Remove Spam
-                    </Button>
-                    <Button
-                      variant="danger"
-                      size="sm"
-                      onClick={() => {
-                        if (confirm("Delete listing?")) {
-                          deleteListing(l.id);
-                          refresh();
-                        }
-                      }}
-                    >
+                    {!l.is_spam && (
+                      <Button variant="outline" size="sm" onClick={() => handleSpam(l.id)}>
+                        Spam
+                      </Button>
+                    )}
+                    <Button variant="danger" size="sm" onClick={() => handleDelete(l.id)}>
                       Delete
                     </Button>
                   </div>

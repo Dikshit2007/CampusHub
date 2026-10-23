@@ -5,12 +5,11 @@ export type LostFoundType = "lost" | "found";
 export type ItemStatus = "Active" | "Returned" | "Claimed";
 
 export type MarketplaceCategory =
-  | "Books"
-  | "Calculators"
-  | "Electronics"
-  | "Cycles"
-  | "Hostel Items"
-  | "Others";
+  | "Electronics & Accessories"
+  | "Books & Study Materials"
+  | "Clothing & Fashion"
+  | "Stationery"
+  | "Hostel & Daily Essentials";
 
 export interface User {
   id: string;

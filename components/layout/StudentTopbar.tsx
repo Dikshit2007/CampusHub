@@ -25,7 +25,7 @@ export function StudentTopbar({ onMenuClick }: { onMenuClick: () => void }) {
         <Menu className="h-5 w-5 text-slate-600" />
       </button>
       <div className="hidden lg:block text-sm text-slate-500">
-        University Student Portal
+        Silicon University
       </div>
       <div className="flex items-center gap-3 ml-auto">
         <div className="flex items-center gap-2 text-sm">

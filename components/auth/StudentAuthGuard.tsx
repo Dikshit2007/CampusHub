@@ -1,3 +1,4 @@
+
 "use client";
 
 import { PageLoading } from "@/components/ui/LoadingSkeleton";
@@ -6,18 +7,26 @@ import { useSession } from "@/providers/SessionProvider";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 
-export function StudentAuthGuard({ children }: { children: React.ReactNode }) {
+export function StudentAuthGuard({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   const { studentSession, isLoading } = useSession();
   const router = useRouter();
 
   useEffect(() => {
-    if (!isLoading && !studentSession) {
+    if (isLoading) return;
+
+    if (!studentSession) {
       router.replace(ROUTES.studentLogin);
     }
   }, [isLoading, studentSession, router]);
 
-  if (isLoading) return <PageLoading />;
-  if (!studentSession) return <PageLoading />;
+  // Wait until the session has been checked.
+  if (isLoading || !studentSession) {
+    return <PageLoading />;
+  }
 
   return <>{children}</>;
 }

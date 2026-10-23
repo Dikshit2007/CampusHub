@@ -15,6 +15,8 @@ export const ROUTES = {
   adminComplaints: "/admin/dashboard/complaints",
   adminLostFound: "/admin/dashboard/lost-found",
   adminMarketplace: "/admin/dashboard/marketplace",
+  dashboard: "/dashboard",
+  signup: "/signup",
 } as const;
 
 export const COMPLAINT_STATUSES: ComplaintStatus[] = [
@@ -35,12 +37,11 @@ export const COMPLAINT_CATEGORIES = [
 ] as const;
 
 export const MARKETPLACE_CATEGORIES: MarketplaceCategory[] = [
-  "Books",
-  "Calculators",
-  "Electronics",
-  "Cycles",
-  "Hostel Items",
-  "Others",
+  "Electronics & Accessories",
+  "Books & Study Materials",
+  "Clothing & Fashion",
+  "Stationery",
+  "Hostel & Daily Essentials",
 ];
 
 export const STUDENT_SESSION_KEY = "campushub_student_session";

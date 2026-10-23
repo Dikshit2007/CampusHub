@@ -1,15 +1,34 @@
+
 import { supabase } from "@/lib/supabase";
 
-export async function isAuthorizedCR(sicNumber: string): Promise<boolean> {
-  const { data, error } = await supabase
-    .from("authorized_representatives")
-    .select("*")
-    .eq("sic", sicNumber)
-    .single();
+function normalizeSic(sic: string): string {
+  return sic.trim().replace(/\s+/g, "").toUpperCase();
+}
 
-  if (error || !data) {
+export async function isAuthorizedCR(sic: string): Promise<boolean> {
+  const normalizedSic = normalizeSic(sic);
+
+  if (!normalizedSic) {
     return false;
   }
 
-  return true;
+  try {
+    const { data, error } = await supabase
+      .from("authorized_representatives")
+      .select("sic")
+      .ilike("sic", normalizedSic)
+      .limit(1);
+
+    if (error) {
+      console.error("CR authorization lookup failed:", error);
+      return false;
+    }
+
+    return (data ?? []).some(
+      (record) => normalizeSic(String(record.sic ?? "")) === normalizedSic
+    );
+  } catch (error) {
+    console.error("Unexpected CR authorization error:", error);
+    return false;
+  }
 }

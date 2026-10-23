@@ -10,6 +10,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/Card";
 import { COMPLAINT_CATEGORIES } from "@/lib/constants";
 import { submitComplaint } from "@/lib/services/complaints.service";
 import { useState } from "react";
+import { toast } from "sonner";
 
 export function ComplaintForm({
   studentSic,
@@ -24,24 +25,39 @@ export function ComplaintForm({
   const [location, setLocation] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [success, setSuccess] = useState(false);
+  const [error, setError] = useState("");
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setError("");
+
+    if (!title.trim()) { setError("Please enter a complaint title."); return; }
+    if (!description.trim()) { setError("Please enter a description."); return; }
+    if (!location.trim()) { setError("Please enter a location."); return; }
+
     setSubmitting(true);
     setSuccess(false);
-    await submitComplaint({
-      student_sic: studentSic,
-      title,
-      description,
-      category,
-      location,
-    });
-    setTitle("");
-    setDescription("");
-    setLocation("");
-    setSuccess(true);
-    setSubmitting(false);
-    onSuccess();
+    try {
+      await submitComplaint({
+        student_sic: studentSic,
+        title: title.trim(),
+        description: description.trim(),
+        category,
+        location: location.trim(),
+      });
+      setTitle("");
+      setDescription("");
+      setLocation("");
+      setSuccess(true);
+      toast.success("Complaint submitted successfully!");
+      onSuccess();
+    } catch (err) {
+      console.error(err);
+      setError("Failed to submit complaint. Please try again.");
+      toast.error("Failed to submit complaint.");
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
@@ -53,6 +69,11 @@ export function ComplaintForm({
         {success && (
           <Alert variant="success" className="mb-4">
             Complaint submitted successfully. Track it in the table below.
+          </Alert>
+        )}
+        {error && (
+          <Alert variant="error" className="mb-4">
+            {error}
           </Alert>
         )}
         <form onSubmit={handleSubmit} className="space-y-4">
