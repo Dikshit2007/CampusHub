@@ -1,337 +1,338 @@
+
 "use client";
+
+import { useState } from "react";
 import { useSession } from "@/providers/SessionProvider";
 import { toast } from "sonner";
 import { useCart } from "@/components/context/CartContext";
-import { useState } from "react";
+import type { OrderSuccessDetails } from "./CartDrawer";
 
 interface Props {
   open: boolean;
   onClose: () => void;
+  onOrderSuccess: (details: OrderSuccessDetails) => void;
 }
 
 const WEBHOOK_URL =
   "https://hazelnut-drank-powwow.ngrok-free.dev/webhook/700df436-1e46-4cf8-9427-8a205708924d";
 
-/** Sends order data to the n8n webhook. Returns true on success, false on failure. */
-async function notifyWebhook(payload: object): Promise<{ order_id: string } | null> {
-  try {
-    const res = await fetch(WEBHOOK_URL, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "ngrok-skip-browser-warning": "true",
-      },
-      body: JSON.stringify(payload),
-    });
-    if (!res.ok) return null;
-    const data = await res.json();
-    return data;
-  } catch {
-    return null;
-  }
-}
-
-function generateLocalOrderId(): string {
-  const ts = Date.now().toString(36).toUpperCase();
-  const rand = Math.random().toString(36).substring(2, 6).toUpperCase();
-  return `CH-${ts}-${rand}`;
-}
-
 export default function CheckoutModal({
   open,
   onClose,
+  onOrderSuccess,
 }: Props) {
   const { studentSession } = useSession();
   const { items, clearCart } = useCart();
+
   const [notes, setNotes] = useState("");
   const [loading, setLoading] = useState(false);
-  const [orderId, setOrderId] = useState("");
-  const [paymentMethod, setPaymentMethod] =
-    useState<"cash" | "online">("cash");
+  const [paymentMethod, setPaymentMethod] = useState<"cash" | "online">("cash");
 
   const total = items.reduce(
-    (sum, item) =>
-      sum +
-      item.product.price * item.quantity,
+    (sum, item) => sum + item.product.price * item.quantity,
     0
   );
 
-  const loadRazorpay = () => {
-    return new Promise((resolve) => {
-      if ((window as any).Razorpay) { resolve(true); return; }
+  const loadRazorpay = (): Promise<boolean> =>
+    new Promise((resolve) => {
+      if ((window as any).Razorpay) {
+        resolve(true);
+        return;
+      }
+
       const script = document.createElement("script");
       script.src = "https://checkout.razorpay.com/v1/checkout.js";
       script.onload = () => resolve(true);
       script.onerror = () => resolve(false);
       document.body.appendChild(script);
     });
-  };
 
-  const handlePlaceOrder = async () => {
+  const submitOrderToWebhook = async (
+    method: "cash" | "online",
+    paymentId?: string,
+    razorpayOrderId?: string
+  ): Promise<boolean> => {
+    if (!studentSession) {
+      toast.error("Please log in before placing an order.");
+      return false;
+    }
+
+    const orderDate = new Date().toISOString();
+
+    const payload = {
+      studentName: studentSession.user.full_name,
+      studentSic: studentSession.user.sic_number,
+      items: items.map((item) => ({
+        name: item.product.name,
+        qty: item.quantity,
+        price: item.product.price,
+      })),
+      total,
+      paymentMethod: method,
+      paymentId: paymentId ?? null,
+      orderId: razorpayOrderId ?? null,
+      notes,
+      createdAt: orderDate,
+    };
+
     try {
-      if (paymentMethod === "online") {
-        const loaded = await loadRazorpay();
-        if (!loaded) {
-          toast.error("Failed to load Razorpay. Check your internet connection.");
-          return;
-        }
+      const response = await fetch(WEBHOOK_URL, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "ngrok-skip-browser-warning": "true",
+        },
+        body: JSON.stringify(payload),
+      });
 
-        let razorpayOrder: any = null;
-        try {
-          const orderResponse = await fetch("/api/create-order", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ amount: total }),
-          });
-          if (!orderResponse.ok) throw new Error("Order creation failed");
-          razorpayOrder = await orderResponse.json();
-        } catch {
-          toast.error("Failed to create payment order. Please try cash payment.");
-          return;
-        }
+      const responseText = await response.text();
 
-        const options = {
-          key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID!,
-          amount: razorpayOrder.amount,
-          currency: razorpayOrder.currency,
-          order_id: razorpayOrder.id,
-          name: "CampusHub",
-          description: "QuickMart Order",
-          prefill: {
-            name: studentSession?.user.full_name,
-          },
-          theme: { color: "#2563eb" },
-          handler: async function (response: any) {
-            const payload = {
-              studentName: studentSession?.user.full_name,
-              studentSic: studentSession?.user.sic_number,
-              items: items.map((item) => ({
-                name: item.product.name,
-                qty: item.quantity,
-              })),
-              total,
-              paymentMethod: "online",
-              paymentId: response.razorpay_payment_id,
-              orderId: response.razorpay_order_id,
-              notes,
-            };
+      console.log("QuickMart webhook status:", response.status);
+      console.log("QuickMart webhook response:", responseText);
 
-            const data = await notifyWebhook(payload);
-            const confirmedOrderId =
-              data?.order_id ?? response.razorpay_order_id ?? generateLocalOrderId();
-
-            clearCart();
-            setOrderId(confirmedOrderId);
-          },
-        };
-
-        const rzp = new (window as any).Razorpay(options);
-        rzp.on("payment.failed", () => {
-          toast.error("Payment failed. Please try again.");
-        });
-        rzp.open();
-        return;
+      if (!response.ok) {
+        toast.error("The order could not be confirmed. Please try again.");
+        return false;
       }
 
-      // Cash on delivery flow
-      setLoading(true);
+      let webhookData: any = {};
 
-      const payload = {
-        studentName: studentSession?.user.full_name,
-        studentSic: studentSession?.user.sic_number,
+      try {
+        webhookData = responseText ? JSON.parse(responseText) : {};
+      } catch {
+        // The webhook may return plain text or an empty response.
+      }
+
+      // Support common response formats from n8n.
+      const returnedOrderId =
+        webhookData?.order_id ??
+        webhookData?.orderId ??
+        webhookData?.order?.order_id ??
+        webhookData?.data?.order_id ??
+        webhookData?.data?.orderId;
+
+      const displayOrderId =
+        returnedOrderId != null && String(returnedOrderId).trim() !== ""
+          ? String(returnedOrderId)
+          : `QM-${Date.now().toString().slice(-10)}`;
+
+      const details: OrderSuccessDetails = {
+        orderId: displayOrderId,
+        studentName: studentSession.user.full_name,
+        studentSic: studentSession.user.sic_number,
         items: items.map((item) => ({
           name: item.product.name,
           qty: item.quantity,
+          price: item.product.price,
         })),
         total,
-        paymentMethod,
-        notes,
+        paymentMethod: method,
+        paymentId: paymentId ?? null,
+        date: orderDate,
       };
 
-      const data = await notifyWebhook(payload);
-      const confirmedOrderId = data?.order_id ?? generateLocalOrderId();
-
+      // Show success only after the webhook responds successfully.
       clearCart();
-      setOrderId(confirmedOrderId);
+      setNotes("");
+      setPaymentMethod("cash");
+      onOrderSuccess(details);
+
+      return true;
     } catch (error) {
-      console.error(error);
-      toast.error("Failed to place order. Please try again.");
+      console.error("QuickMart order error:", error);
+      toast.error(
+        "Could not connect to the store. Please check your connection."
+      );
+      return false;
+    }
+  };
+
+  const handlePlaceOrder = async () => {
+    if (loading || items.length === 0) return;
+
+    if (!studentSession) {
+      toast.error("Please log in before placing an order.");
+      return;
+    }
+
+    setLoading(true);
+
+    try {
+      if (paymentMethod === "cash") {
+        await submitOrderToWebhook("cash");
+        return;
+      }
+
+      const loaded = await loadRazorpay();
+
+      if (!loaded) {
+        toast.error("Failed to load Razorpay. Check your internet connection.");
+        return;
+      }
+
+      let razorpayOrder: any;
+
+      try {
+        const response = await fetch("/api/create-order", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ amount: total }),
+        });
+
+        if (!response.ok) {
+          throw new Error("Payment order creation failed");
+        }
+
+        razorpayOrder = await response.json();
+      } catch (error) {
+        console.error(error);
+        toast.error("Failed to start payment. Please try again.");
+        return;
+      }
+
+      const options = {
+        key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID!,
+        amount: razorpayOrder.amount,
+        currency: razorpayOrder.currency,
+        order_id: razorpayOrder.id,
+        name: "CampusHub",
+        description: "QuickMart Order",
+        prefill: {
+          name: studentSession.user.full_name,
+        },
+        theme: { color: "#2563eb" },
+
+        handler: async (paymentResponse: any) => {
+          setLoading(true);
+
+          try {
+            await submitOrderToWebhook(
+              "online",
+              paymentResponse.razorpay_payment_id,
+              paymentResponse.razorpay_order_id
+            );
+          } finally {
+            setLoading(false);
+          }
+        },
+      };
+
+      const razorpay = new (window as any).Razorpay(options);
+
+      razorpay.on("payment.failed", () => {
+        toast.error("Payment failed. Please try again.");
+      });
+
+      razorpay.open();
     } finally {
       setLoading(false);
     }
   };
-
-  if (orderId) {
-    return (
-      <>
-        <div className="fixed inset-0 bg-black/40 z-50" />
-
-        <div className="fixed inset-0 flex items-center justify-center z-[60] p-4">
-          <div className="bg-white w-full max-w-md rounded-2xl shadow-2xl p-8 text-center">
-
-            <div className="text-5xl mb-4">
-              🎉
-            </div>
-
-            <h2 className="text-2xl font-bold mb-3">
-              Order Placed Successfully
-            </h2>
-
-            <p className="text-gray-500">
-              Order ID
-            </p>
-
-            <p className="font-bold text-lg mb-4">
-              {orderId}
-            </p>
-
-            <p className="text-gray-500 mb-6">
-              {paymentMethod === "cash" ? "Cash on Delivery" : "Online Payment"}
-            </p>
-
-            <button
-              onClick={() => {
-                setOrderId("");
-                setNotes("");
-                onClose();
-              }}
-              className="w-full bg-blue-600 text-white py-3 rounded-xl hover:bg-blue-700"
-            >
-              Continue Shopping
-            </button>
-
-          </div>
-        </div>
-      </>
-    );
-  }
 
   if (!open) return null;
 
   return (
     <>
       <div
-        className="fixed inset-0 bg-black/40 z-50"
-        onClick={onClose}
+        className="fixed inset-0 z-[70] bg-black/40"
+        onClick={() => {
+          if (!loading) onClose();
+        }}
       />
 
-      <div className="fixed inset-0 flex items-center justify-center z-[60] p-4">
-        <div className="bg-white w-full max-w-lg rounded-2xl shadow-2xl p-6 max-h-[85vh] overflow-y-auto">
-
-          <div className="flex justify-between items-center mb-6">
-            <h2 className="text-2xl font-bold">
-              Checkout
-            </h2>
+      <div className="fixed inset-0 z-[80] flex items-center justify-center p-4">
+        <div className="max-h-[85vh] w-full max-w-lg overflow-y-auto rounded-2xl bg-white p-6 shadow-2xl">
+          <div className="mb-6 flex items-center justify-between">
+            <h2 className="text-2xl font-bold">Checkout</h2>
 
             <button
+              type="button"
               onClick={onClose}
-              className="text-2xl"
+              disabled={loading}
+              aria-label="Close checkout"
+              className="text-2xl disabled:opacity-50"
             >
               ✕
             </button>
           </div>
 
-          <div className="border rounded-xl p-4 mb-4">
-            <h3 className="font-semibold mb-3">
-              Payment Method
-            </h3>
+          <div className="mb-4 rounded-xl border p-4">
+            <h3 className="mb-3 font-semibold">Payment Method</h3>
 
             <div className="space-y-3">
-              <label className="flex items-center gap-3 cursor-pointer">
+              <label className="flex cursor-pointer items-center gap-3">
                 <input
                   type="radio"
                   name="paymentMethod"
                   checked={paymentMethod === "cash"}
-                  onChange={() =>
-                    setPaymentMethod("cash")
-                  }
+                  disabled={loading}
+                  onChange={() => setPaymentMethod("cash")}
                 />
-
                 <span>Cash on Delivery</span>
               </label>
 
-              <label className="flex items-center gap-3 cursor-pointer">
+              <label className="flex cursor-pointer items-center gap-3">
                 <input
                   type="radio"
                   name="paymentMethod"
                   checked={paymentMethod === "online"}
-                  onChange={() =>
-                    setPaymentMethod("online")
-                  }
+                  disabled={loading}
+                  onChange={() => setPaymentMethod("online")}
                 />
-
                 <span>Pay Online (Razorpay)</span>
               </label>
             </div>
           </div>
 
-          <div className="border rounded-xl p-4 mb-4">
-            <h3 className="font-semibold mb-3">
-              Notes for Shopkeeper
-            </h3>
+          <div className="mb-4 rounded-xl border p-4">
+            <h3 className="mb-3 font-semibold">Notes for Shopkeeper</h3>
+
             <textarea
               placeholder="Any special instructions..."
-              className="w-full border rounded-lg px-3 py-2"
+              className="w-full rounded-lg border px-3 py-2"
               rows={3}
               value={notes}
-              onChange={(e) =>
-                setNotes(e.target.value)
-              }
+              disabled={loading}
+              onChange={(event) => setNotes(event.target.value)}
             />
           </div>
 
-          <div className="border rounded-xl p-4 mb-4">
-            <h3 className="font-semibold mb-3">
-              Order Summary
-            </h3>
+          <div className="mb-4 rounded-xl border p-4">
+            <h3 className="mb-3 font-semibold">Order Summary</h3>
 
             <div className="space-y-3">
               {items.map((item) => (
                 <div
                   key={item.product.id}
-                  className="flex justify-between"
+                  className="flex justify-between gap-4"
                 >
                   <span>
-                    {item.product.name} ×{" "}
-                    {item.quantity}
+                    {item.product.name} × {item.quantity}
                   </span>
 
                   <span>
-                    ₹
-                    {item.product.price *
-                      item.quantity}
+                    ₹{(item.product.price * item.quantity).toFixed(2)}
                   </span>
                 </div>
               ))}
             </div>
           </div>
 
-          <div className="border rounded-xl p-4">
-            <div className="flex justify-between font-bold text-lg mb-4">
+          <div className="rounded-xl border p-4">
+            <div className="mb-4 flex justify-between text-lg font-bold">
               <span>Total</span>
-              <span>₹{total}</span>
+              <span>₹{total.toFixed(2)}</span>
             </div>
 
             <button
+              type="button"
               onClick={handlePlaceOrder}
               disabled={loading || items.length === 0}
-              className="
-                w-full
-                bg-blue-600
-                text-white
-                py-3
-                rounded-xl
-                hover:bg-blue-700
-                disabled:opacity-50
-                disabled:cursor-not-allowed
-              "
+              className="w-full rounded-xl bg-blue-600 py-3 font-semibold text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
             >
-              {loading
-                ? "Placing Order..."
-                : "Place Order"}
+              {loading ? "Processing..." : "Place Order"}
             </button>
           </div>
-
         </div>
       </div>
     </>
